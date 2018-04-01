@@ -1,0 +1,121 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template to store sensor data to S3
+
+Resources:
+  SensorDataBucket:
+    DeletionPolicy: Retain
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub sensor-data-${AWS::AccountId}-${AWS::Region}
+
+  SensorDataTopicRule:
+    Type: AWS::IoT::TopicRule
+    Properties:
+      RuleName: sensor_data_rule
+      TopicRulePayload:
+        RuleDisabled: false
+        Sql: >-
+          SELECT * FROM '/data/+/sensor'
+        Actions:
+          - Kinesis:
+              PartitionKey: ${topic()}
+              RoleArn: !GetAtt SensorDataTopicRuleRole.Arn
+              StreamName: sensor_data_stream
+
+  SensorDataStream:
+    Type: AWS::Kinesis::Stream
+    Properties:
+      Name: sensor_data_stream
+      RetentionPeriodHours: 24
+      ShardCount: 1
+
+  SensorDataFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      DeliveryStreamName: sensor_data_firehose
+      DeliveryStreamType: KinesisStreamAsSource
+      KinesisStreamSourceConfiguration:
+        KinesisStreamARN: !GetAtt SensorDataStream.Arn
+        RoleARN: !GetAtt SensorDataSourceRole.Arn
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !GetAtt SensorDataBucket.Arn
+        BufferingHints:
+          IntervalInSeconds: 60
+          SizeInMBs: 50
+        CompressionFormat: UNCOMPRESSED
+        Prefix: attendance/
+        RoleARN: !GetAtt SensorDataFirehoseDeliveryRole.Arn
+
+  SensorDataTopicRuleRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: sensor-data-topic-rule-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: iot.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: sensor-data-topic-rule-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: kinesis:PutRecord
+                Resource: !GetAtt SensorDataStream.Arn
+
+  SensorDataSourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: sensor-data-source-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: sensor-data-source-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - kinesis:DescribeStream
+                  - kinesis:GetShardIterator
+                  - kinesis:GetRecords
+                Resource: !GetAtt SensorDataStream.Arn
+
+  SensorDataFirehoseDeliveryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: sensor-data-firehose-delivery-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: sensor-data-firehose-delivery-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:PutObject
+                Resource:
+                  - Fn::Join:
+                    - ""
+                    - - Fn::GetAtt: SensorDataBucket.Arn
+                      - /*
