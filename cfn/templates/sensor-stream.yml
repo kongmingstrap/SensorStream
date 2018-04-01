@@ -44,7 +44,7 @@ Resources:
           IntervalInSeconds: 60
           SizeInMBs: 50
         CompressionFormat: UNCOMPRESSED
-        Prefix: attendance/
+        Prefix: sensor/
         RoleARN: !GetAtt SensorDataFirehoseDeliveryRole.Arn
 
   SensorDataTopicRuleRole:
@@ -119,3 +119,13 @@ Resources:
                     - ""
                     - - Fn::GetAtt: DeviceDataBucket.Arn
                       - /*
+
+Outputs:
+  DeviceDataBucketName:
+    Value: !Ref DeviceDataBucket
+    Export:
+      Name: !Sub ${AWS::StackName}-DeviceDataBucketName
+  DeviceDataBucketArn:
+    Value: !GetAtt DeviceDataBucket.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-DeviceDataBucketArn
