@@ -3,11 +3,11 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Template to store sensor data to S3
 
 Resources:
-  SensorDataBucket:
+  DeviceDataBucket:
     DeletionPolicy: Retain
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub sensor-data-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub device-data-${AWS::AccountId}-${AWS::Region}
 
   SensorDataTopicRule:
     Type: AWS::IoT::TopicRule
@@ -16,7 +16,7 @@ Resources:
       TopicRulePayload:
         RuleDisabled: false
         Sql: >-
-          SELECT * FROM '/data/+/sensor'
+          SELECT * FROM '/device/+/data'
         Actions:
           - Kinesis:
               PartitionKey: ${topic()}
@@ -39,7 +39,7 @@ Resources:
         KinesisStreamARN: !GetAtt SensorDataStream.Arn
         RoleARN: !GetAtt SensorDataSourceRole.Arn
       ExtendedS3DestinationConfiguration:
-        BucketARN: !GetAtt SensorDataBucket.Arn
+        BucketARN: !GetAtt DeviceDataBucket.Arn
         BufferingHints:
           IntervalInSeconds: 60
           SizeInMBs: 50
@@ -117,5 +117,5 @@ Resources:
                 Resource:
                   - Fn::Join:
                     - ""
-                    - - Fn::GetAtt: SensorDataBucket.Arn
+                    - - Fn::GetAtt: DeviceDataBucket.Arn
                       - /*
