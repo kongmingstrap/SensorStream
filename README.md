@@ -14,33 +14,32 @@ SensorStream
 # Architecture
 ![architecture](https://github.com/kongmingstrap/SensorStream/blob/master/architecture.png "architecture")
 
-# Setting
 
-## 1. Python
+# CloudFomation
 
-### shell
+## Requirements
 
-```shell
-$ pyenv local 3.6.4
-$ python -m venv .venv3
-$ source .venv3/bin/activate
-$ pip install pipenv
-$ pipenv install
+- [AWS CLI](https://aws.amazon.com/cli/)
+- [Docker for Mac](https://www.docker.com/docker-mac)
+- [yarn](https://yarnpkg.com)
+
+## Setting
+
+- Move working directory
+
+```bash
+$ cd cfn
 ```
 
-### fish shell
+- Install yarn
 
-```shell
-$ pyenv local 3.6.4
-$ python -m venv .venv3
-$ source .venv3/bin/activate.fish
-$ pip install pipenv
-$ pipenv install
+```bash
+$ yarn install
 ```
 
-# Deploy
+## Deploy
 
-## 1. Configure AWS credentials
+### 1. Configure AWS credentials
 
 - `~/.aws/credentials`
 
@@ -56,4 +55,16 @@ aws_secret_access_key = <your_aws_secret_access_key>
 [profile sensor-stream-development]
 region = ap-northeast-1
 output = json
+```
+
+### 2. Docker image build
+
+```bash
+$ ./build.sh
+```
+
+### 3. Deploy
+
+```bash
+$ ./run.sh -t <template.yml>
 ```
