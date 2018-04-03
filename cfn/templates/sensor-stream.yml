@@ -16,7 +16,7 @@ Resources:
       TopicRulePayload:
         RuleDisabled: false
         Sql: >-
-          SELECT * FROM '/device/+/data'
+          SELECT topic(3) as device_id, * FROM '/device/+/data'
         Actions:
           - Kinesis:
               PartitionKey: ${topic()}
